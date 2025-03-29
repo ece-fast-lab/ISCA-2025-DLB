@@ -1,0 +1,3 @@
+[submodule "src/dpdk-22.11.2-dlb"]
+	path = src/dpdk-22.11.2-dlb
+	url = https://github.com/GarboLou/dpdk-22.11.2-dlb
