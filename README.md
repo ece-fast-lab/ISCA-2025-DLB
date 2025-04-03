@@ -52,7 +52,7 @@ Our artifact contains all source files for AccDirect and provides instructions o
 ---
 
 ## 🚀 Experiment Workflow
-For ISCA 2025 AE, we have already cloned this repo under `/home/isca25_ae/` and built all the necessary drivers, libraries, and benchmarks on server, client, and snic. You can skip step 1 and 2.
+For ISCA 2025 AE, we have already cloned this repo under `/home/isca25_ae/` and built all the necessary drivers, libraries, and benchmarks on server, client, and snic. You can skip step 2.
 
 ### 1. Kernel boot parameter
 Please make sure the following kernel boot parameters are properly set `/etc/default/grub`. 
@@ -68,15 +68,20 @@ $ sudo reboot
 ```
 
 ### 2. Installation
-1. Clone the GitHub repo
+a). Clone the GitHub repo and submodules.
+
     ```
     git clone https://github.com/ece-fast-lab/ISCA-2025-DLB
     cd ISCA-2025-DLB
+    git submodule update --init --recursive
     git submodule update --remote
     ```
-2. Build all necessary drivers, libraries, and benchmarks
+
+b). Build all necessary drivers, libraries, and benchmarks for server, snic, or client.
+
     ```
-    scripts/common/build_all.sh {server|snic|client}
+    cd scripts/common/
+    ./build_all.sh {server|snic|client}
     ```
 
 

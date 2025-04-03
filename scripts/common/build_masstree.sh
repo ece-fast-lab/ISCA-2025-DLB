@@ -17,12 +17,14 @@ MASSTREE_DIR="$REPO_PATH/src/masstree"
 ## baseline
 if [[ "$host" != "snic" ]]; then
     cd "$MASSTREE_DIR/baseline"
+    echo "==== baseline ===="
     make clean
     make -j
 fi
 
 ## dlb
 cd "$MASSTREE_DIR/dlb"
+echo "==== dlb ===="
 case "$host" in
     server)
         sed -i 's/^#define IS_SERVER .*/#define IS_SERVER 1/' "$MASSTREE_DIR/dlb/RDMAConnectionRC.h"
@@ -48,7 +50,8 @@ esac
 
 ## dpdk-pd
 if [[ "$host" != "snic" ]]; then
-    cd "$MASSTREE_DIR/dlb/dpdk-pd"
+    cd "$MASSTREE_DIR/dpdk-pd"
+    echo "==== dpdk-pd ===="
     make clean
     make -j
 fi

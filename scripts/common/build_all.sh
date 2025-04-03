@@ -21,10 +21,14 @@ source env_setup.sh
 
 
 ###### Build DLB Drivers and libdlb ######
-# bash "$REPO_PATH/scripts/common/build_dlb.sh"
+if [[ "$host" != "snic" ]]; then
+    bash "$REPO_PATH/scripts/common/build_dlb.sh"
+fi
 
 ###### Build DPDK ######
-# bash "$REPO_PATH/scripts/common/build_dpdk.sh"
+if [[ "$host" != "snic" ]]; then
+    bash "$REPO_PATH/scripts/common/build_dpdk.sh"
+fi
 
 
 ###### Build dpdk bench, libdlb bench, and AccDirect ######

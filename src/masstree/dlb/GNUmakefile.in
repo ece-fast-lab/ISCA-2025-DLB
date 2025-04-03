@@ -23,7 +23,7 @@ endif
 ifneq ($(strip $(NOSUPERPAGE)), )
   CPPFLAGS += -DNOSUPERPAGE
 endif
-LIBS = @LIBS@ -lpthread -lm -libverbs -lrt -ldlb
+LIBS = @LIBS@ -lpthread -lm -libverbs -ldlb -lrt
 LDFLAGS = @LDFLAGS@
 
 all: test_atomics mtd mtclient mttest
