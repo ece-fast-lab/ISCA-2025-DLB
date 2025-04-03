@@ -9,11 +9,11 @@ from itertools import product
 import os
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/user/ISCA-2025-DLB")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "user")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "a")         # REVIEWER_ID to determine directory name
-user_password = os.environ.get("PASSWORD", "1234!@#$")         # PASSWORD to use for sudo
+reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determine directory name
+user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 dir_path = f"{repo_path}/scripts/fig5/results_{reviewer_id}"
 
@@ -41,7 +41,8 @@ local_l = ["0-13"]
 local_size = [64]
 local_delay = [100]
 local_distribution = ["exponential"]
-local_rate = [1000000, 3000000, 5000000, 8000000, 10000000, 12000000, 15000000, 20000000, 25000000, 30000000, 35000000, 40000000, 45000000, 50000000, 60000000]
+local_rate = [1000000, 5000000, 10000000, 15000000, 20000000, 25000000, 30000000, 35000000, 40000000, 45000000, 50000000, 60000000]
+# local_rate = [45000000, 50000000, 60000000]
 local_latency = [1000]
 
 
@@ -66,24 +67,36 @@ def run_remote_command(remote_command, mpps_values, stop_event, mpps_regex):
             mpps_values.append(mpps)
     ssh_client.close()
 
-# Generate all combinations of options
-all_combinations = product(
-    remote_c, remote_s, remote_a, remote_test, remote_prod_type, remote_stlist,
-    remote_prod_enq_burst_sz, remote_worker_deq_depth, remote_wlcores, remote_nb_rx_adapters,
-    remote_e2e_latency, local_l, local_size, local_latency, local_delay, local_distribution, local_rate
-)
+def kill_remote_process(process_pattern):
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.connect(ssh_host, username=ssh_user, password=user_password)
+    command = f"sudo pkill -f '{process_pattern}'"
+    print(f"Executing remote pkill command: {command}")
+    ssh_client.exec_command(command)
+    ssh_client.close()
 
 # Loop over each combination
-for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
-     nb_rx_adapters, e2e_latency, l, size, latency, d, D, rate) in all_combinations:
-    
-    # Calculate the number of wlcores by counting the range
-    wlcores_count = int(wlcores.split('-')[1]) - int(wlcores.split('-')[0]) + 1
-    local_l_count = int(l.split('-')[1]) - int(l.split('-')[0])
-    
-    nb_rx_adapters = 5
+for ii in range(4):
+    # Generate all combinations of options
+    all_combinations = product(
+        remote_c, remote_s, remote_a, remote_test, remote_prod_type, remote_stlist,
+        remote_prod_enq_burst_sz, remote_worker_deq_depth, remote_wlcores, remote_nb_rx_adapters,
+        remote_e2e_latency, local_l, local_size, local_latency, local_delay, local_distribution, local_rate
+    )
 
-    for ii in range(4):
+    if ii > 0:
+        time.sleep(30)
+
+    for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
+        nb_rx_adapters, e2e_latency, l, size, latency, d, D, rate) in all_combinations:
+        
+        # Calculate the number of wlcores by counting the range
+        wlcores_count = int(wlcores.split('-')[1]) - int(wlcores.split('-')[0]) + 1
+        local_l_count = int(l.split('-')[1]) - int(l.split('-')[0])
+        
+        nb_rx_adapters = 5
+
         
         # Define local command using the current combination
         local_command = (
@@ -97,7 +110,19 @@ for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
         mpps_values = []
         stop_event = threading.Event()  # Event to control the termination of the remote command
         
-        if (ii == 1):
+        if (ii == 3):
+            rss_remote_command = (
+                f'sudo {repo_path}/src/dlb_bench/dpdk_bench/dpdk-rx/dpdk-rx -l 0-{0+wlcores_count+nb_rx_adapters} -a {a} '
+                f'-- --latency=1000 -m 0'
+            )
+            process_pattern = "dpdk-rx"
+            
+            logfile_path = f'{dir_path}/rss_rx_{nb_rx_adapters}_wlcores_{wlcores_count}_size_{size}_tx_{local_l_count}_d_{d}_{D}_r_{rate}.log'
+            # Start the remote command in a separate thread
+            mpps_regex = re.compile(r"Total RX packet per second: ([\d.]+) M")
+            remote_thread = threading.Thread(target=run_remote_command, args=(rss_remote_command, mpps_values, stop_event, mpps_regex))
+
+        elif (ii == 0):
             dlb_remote_command = (
                 f'sudo {repo_path}/src/dpdk-22.11.2-dlb/dpdk-stable-22.11.2/build/app/dpdk-test-eventdev -c {c} -s {s}  -a {a} '
                 f'-a 0000:f5:00.0 -- --test={test} --prod_type_{prod_type} '
@@ -105,25 +130,16 @@ for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
                 f'--worker_deq_depth={deq_depth} --wlcores={wlcores} '
                 f'--nb_rx_adapters={nb_rx_adapters} --e2e_latency={e2e_latency}'
             )
+            process_pattern = "dpdk-test-eventdev"
             
             logfile_path = f'{dir_path}/dlb_rx_{nb_rx_adapters}_wlcores_{wlcores_count}_size_{size}_tx_{local_l_count}_d_{d}_{D}_r_{rate}.log'
             # Start the remote command in a separate thread
             mpps_regex = re.compile(r"sample \d+: ([\d.]+) mpps")
             remote_thread = threading.Thread(target=run_remote_command, args=(dlb_remote_command, mpps_values, stop_event, mpps_regex))
             
-        elif (ii == 0):
-            rss_remote_command = (
-                f'sudo {repo_path}/src/dlb_bench/dpdk_bench/dpdk-rx/dpdk-rx -l 0-{0+wlcores_count+nb_rx_adapters} -a {a} '
-                f'-- --latency=1000 -m 0'
-            )
             
-            logfile_path = f'{dir_path}/rss_rx_{nb_rx_adapters}_wlcores_{wlcores_count}_size_{size}_tx_{local_l_count}_d_{d}_{D}_r_{rate}.log'
-            # Start the remote command in a separate thread
-            mpps_regex = re.compile(r"Total RX packet per second: ([\d.]+) M")
-            remote_thread = threading.Thread(target=run_remote_command, args=(rss_remote_command, mpps_values, stop_event, mpps_regex))
-            
-        elif (ii == 2):
-            deq_depth = 32
+        elif (ii == 1):
+            # deq_depth = 32
             sw_remote_command = (
                 f'sudo {repo_path}/src/dpdk-22.11.2-dlb/dpdk-stable-22.11.2/build/app/dpdk-test-eventdev -c {c} -s {s} -a {a} '
                 f'--vdev=event_sw0 -- --test={test} --prod_type_{prod_type} '
@@ -131,18 +147,19 @@ for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
                 f'--worker_deq_depth={deq_depth} --wlcores={wlcores} '
                 f'--nb_rx_adapters={nb_rx_adapters} --e2e_latency={e2e_latency}'
             )
+            process_pattern = "dpdk-test-eventdev"
             
             logfile_path = f'{dir_path}/sw_rx_{nb_rx_adapters}_wlcores_{wlcores_count}_size_{size}_tx_{local_l_count}_d_{d}_{D}_r_{rate}.log'
             # Start the remote command in a separate thread
             mpps_regex = re.compile(r"sample \d+: ([\d.]+) mpps")
             remote_thread = threading.Thread(target=run_remote_command, args=(sw_remote_command, mpps_values, stop_event, mpps_regex))
             
-        elif (ii == 3):
+        elif (ii == 2):
             distributor_remote_command = (
                 f'sudo {repo_path}/src/dpdk-22.11.2-dlb/dpdk-stable-22.11.2/build/app/dpdk-distributor-e2e -l 0-{wlcores_count+nb_rx_adapters+1} -a {a} '
                 f'-- -p 1 -w {wlcores_count} -r {nb_rx_adapters}'
             )
-            print(distributor_remote_command)
+            process_pattern = "dpdk-distributor-e2e"
             
             logfile_path = f'{dir_path}/distributor_rx_{nb_rx_adapters}_wlcores_{wlcores_count}_size_{size}_tx_{local_l_count}_d_{d}_{D}_r_{rate}.log'
             # Start the remote command in a separate thread
@@ -153,7 +170,7 @@ for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
             continue
         
         remote_thread.start()
-        time.sleep(10)
+        time.sleep(6)
 
         # Run the local command and log its output while the remote command is running
         with open(logfile_path, 'w') as logfile:
@@ -170,10 +187,13 @@ for (c, s, a, test, prod_type, stlist, enq_burst_sz, deq_depth, wlcores,
             # subprocess.run(['sudo', 'pkill', '-f', './dpdk-tx'], check=True)
             local_process.communicate()
 
+        time.sleep(6)
 
+        kill_remote_process(process_pattern)
         # Signal the remote thread to stop and wait for it to finish
         stop_event.set()
         remote_thread.join()
+
 
         # Calculate and log the average of the highest three mpps values
         if len(mpps_values) >= 3:

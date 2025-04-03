@@ -6,6 +6,11 @@ CXXFLAGS = @CXXFLAGS@
 RANLIB = @RANLIB@
 DEPSDIR := .deps
 DEPCFLAGS = -MD -MF $(DEPSDIR)/$*.d -MP
+
+# DPDK specific variables
+DPDK_CFLAGS = $(shell pkg-config --cflags libdpdk)
+DPDK_LIBS   = $(shell pkg-config --libs libdpdk)
+
 ifeq ($(strip $(MEMMGR)), )
   MEMMGR = @MALLOC_LIBS@
 endif
@@ -18,7 +23,7 @@ endif
 ifneq ($(strip $(NOSUPERPAGE)), )
   CPPFLAGS += -DNOSUPERPAGE
 endif
-LIBS = @LIBS@ -lpthread -lm
+LIBS = @LIBS@ -lpthread -lm -libverbs -lrt
 LDFLAGS = @LDFLAGS@
 
 all: test_atomics mtd mtclient mttest
@@ -82,7 +87,7 @@ configure config.h.in: configure.ac
 	touch config.h.in
 
 config.status: configure
-	./configure @ac_configure_args@
+	./configure '--disable-assertions' @ac_configure_args@
 
 $(DEPSDIR)/stamp:
 	mkdir -p $(DEPSDIR)

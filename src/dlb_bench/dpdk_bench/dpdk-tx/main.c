@@ -32,11 +32,11 @@ static int lcore_tx_worker(void *arg)
     uint16_t max_refcnt_val = 65535;
     uint16_t cur_refcnt_val = max_refcnt_val;
     rte_srand(rte_get_timer_cycles());
-    // uint16_t src_port = rte_rand_max(65536);
-    // uint16_t dst_port = rte_rand_max(65536);
+    uint16_t src_port = rte_rand_max(65536);
+    uint16_t dst_port = rte_rand_max(65536);
     for (size_t i = 0; i < BURST_SIZE; i++) {
-        uint16_t src_port = rte_rand_max(65536);
-        uint16_t dst_port = rte_rand_max(65536);
+        // uint16_t src_port = rte_rand_max(65536);
+        // uint16_t dst_port = rte_rand_max(65536);
         // printf("%d, %d\n", src_port, dst_port);
         // uint16_t src_port = tx_index;
         // uint16_t dst_port = tx_index;
@@ -83,21 +83,8 @@ static int lcore_tx_worker(void *arg)
                 for (size_t i = 0; i < BURST_SIZE; i++) {
                     payload = rte_pktmbuf_mtod_offset(mbufs[i], char *, offset);
                     if (payload != NULL) {
-                        // rte_memcpy(payload, &timestamp_data.data, sizeof(struct my_timestamp)); // Use text-based protocols
-                        if (dummy_process_delay == 999999) {
-                            random_dummy_process_delay = rte_rand() % (500 + 1 - 1) + 1;
-                            rte_memcpy(payload, &random_dummy_process_delay, sizeof(uint64_t));   // Add random dummy proces delay for server to read, from 1-100000
-                        } else {
-                            // rte_memcpy(payload, &dummy_process_delay, sizeof(uint64_t));   // Add constant dummy proces delay for server to read
-                            rte_memcpy(payload, &distributed_delay[i], sizeof(uint64_t));   // Add gaussian distribution dummy proces delay for server to read
-                        }
+                        rte_memcpy(payload, &distributed_delay[i], sizeof(uint64_t));   // Add gaussian distribution dummy proces delay for server to read
                         rte_memcpy(payload + sizeof(uint64_t), &lat_test_start_time, sizeof(uint64_t));   // Use binary data
-                        // add random numbers to packet contents
-                        for (size_t j = 0; j < 2; j++) {
-                            uint64_t rand = rte_rand();
-                            // rte_memcpy(payload + sizeof(struct my_timestamp) + j * sizeof(uint64_t), &rand, sizeof(uint64_t)); // Use text-based protocols
-                            rte_memcpy(payload + 2*sizeof(uint64_t) + j * sizeof(uint64_t), &rand, sizeof(uint64_t)); // Use binary data
-                        }
                     }
                 }
             // }
@@ -170,21 +157,9 @@ static int lcore_tx_worker(void *arg)
                 for (size_t i = next_i; i < next_i+max_nb_tx_pkts; i++) {
                     payload = rte_pktmbuf_mtod_offset(mbufs[i], char *, offset);
                     if (payload != NULL) {
-                        // rte_memcpy(payload, &timestamp_data.data, sizeof(struct my_timestamp)); // Use text-based protocols
-                        if (dummy_process_delay == 999999) {
-                            random_dummy_process_delay = rte_rand() % (1000 + 1 - 1) + 1;
-                            rte_memcpy(payload, &random_dummy_process_delay, sizeof(uint64_t));   // Add random dummy proces delay for server to read, from 1-100000
-                        } else {
-                            // rte_memcpy(payload, &dummy_process_delay, sizeof(uint64_t));   // Add constant dummy proces delay for server to read
-                            rte_memcpy(payload, &distributed_delay[delay_idx], sizeof(uint64_t));   // Add gaussian distribution dummy proces delay for server to read
-                        }
+                        rte_memcpy(payload, &distributed_delay[delay_idx], sizeof(uint64_t));   // Add gaussian distribution dummy proces delay for server to read
                         rte_memcpy(payload + sizeof(uint64_t), &lat_test_start_time, sizeof(uint64_t));   // Use binary data
-                        // add random numbers to packet contents
-                        for (size_t j = 0; j < 2; j++) {
-                            uint64_t rand = rte_rand();
-                            // rte_memcpy(payload + sizeof(struct my_timestamp) + j * sizeof(uint64_t), &rand, sizeof(uint64_t)); // Use text-based protocols
-                            rte_memcpy(payload + 2*sizeof(uint64_t) + j * sizeof(uint64_t), &rand, sizeof(uint64_t)); // Use binary data
-                        }
+                        // printf("start time is %lu, delay is %lu\n", *(uint64_t*)(payload + sizeof(uint64_t)), lat_test_start_time);
                     }
 
                     delay_idx = (delay_idx + 1) % 10000;
@@ -330,10 +305,10 @@ int main(int argc, char **argv) {
                 distributed_delay[i] = dummy_process_delay;
                 break;
         }
-        actual_mean += distributed_delay[i] / 10000;
+        actual_mean += distributed_delay[i];
         // printf("Actual delay is %ld\n", distributed_delay[i]);
     }
-    printf("Actual gaussian mean is %ld\n", actual_mean);
+    printf("Actual gaussian mean is %ld\n", actual_mean / 10000);
 
     // Initialize tx pkt counters
     for (size_t i = 0; i < tx_lcore_count; i++) {
@@ -342,7 +317,7 @@ int main(int argc, char **argv) {
     }
 
     struct rte_mempool *mbuf_pool = rte_pktmbuf_pool_create(
-        "MBUF_POOL", NUM_MBUFS * tx_lcore_count, MBUF_CACHE_SIZE, 0,
+        "MBUF_POOL", NUM_MBUFS * tx_lcore_count * 2, MBUF_CACHE_SIZE, 0,
         RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
     if (!mbuf_pool) {
         rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
@@ -380,16 +355,13 @@ int main(int argc, char **argv) {
     printf("offset to include timestamp is %ld\n", offset);
     
     double *lat_arr = malloc(latency_size * sizeof(double));
-    // double *remote_access_lat_arr = malloc(latency_size * sizeof(double));
-    // double *remote_compute_lat_arr = malloc(latency_size * sizeof(double));
     int step_index = 0;
     int latency_count = 0;
 
     // per sec latency
     int latency_size_per_sec = 1000;
     double *lat_arr_per_sec = malloc(latency_size_per_sec * sizeof(double));
-    // double *remote_access_lat_arr_per_sec = malloc(latency_size_per_sec * sizeof(double));
-    // double *remote_compute_lat_arr_per_sec = malloc(latency_size_per_sec * sizeof(double));
+
     int count_per_sec = 0;
     int step_index_per_sec = 0;
     int full_flag = 0;
@@ -436,19 +408,11 @@ int main(int argc, char **argv) {
                     for (int i = 0; i < nb_rx_pkts; i++) {
                         payload = rte_pktmbuf_mtod_offset(bufs[i], char *, offset);
                         start_time = *(uint64_t *)(payload);  // Use binary data
-                        // sscanf(payload, "%" SCNu64, &start_time);  // Use text-based protocols
+                        // printf("start time is %lf\n", start_time * 1000000.0 / (double)hz);
                         lat += end_time - start_time;
-                        
-                        // sscanf(payload+sizeof(struct my_timestamp), "%" SCNu64, &remote_access_time);  // Use text-based protocols
-                        // sscanf(payload+2*sizeof(struct my_timestamp), "%" SCNu64, &remote_compute_time);  // Use text-based protocols
-                        // remote_access_time += *(uint64_t *)(payload+8);  // Use binary data
-                        // remote_compute_time += *(uint64_t *)(payload+8+8);  // Use binary data
-                        // printf("lat is %lu, access_time is %lu, compute_time is %lu\n", lat, remote_access_time, remote_compute_time);
                     }
                     // add to lat array
-                    lat_arr[step_index] = (double)lat * 1000000.0 / (double)nb_rx_pkts / (double)interval_cycles;
-                    // remote_access_lat_arr[step_index] = (double)remote_access_time * 1000000.0 / (double)nb_rx_pkts / (double)remote_interval_cycles;
-                    // remote_compute_lat_arr[step_index] = (double)remote_compute_time * 1000000.0 / (double)nb_rx_pkts / (double)remote_interval_cycles;
+                    lat_arr[step_index] = (double)lat * 1000000.0 / (double)nb_rx_pkts / (double)hz;
                     step_index ++;
                     if (latency_count != latency_size) {
                         latency_count++;
@@ -459,9 +423,7 @@ int main(int argc, char **argv) {
                     }
 
                     // add to per sec lat array
-                    lat_arr_per_sec[step_index_per_sec] = (double)lat * 1000000.0 / (double)nb_rx_pkts / (double)interval_cycles;
-                    // remote_access_lat_arr_per_sec[step_index_per_sec] = (double)remote_access_time * 1000000.0 / (double)nb_rx_pkts / (double)remote_interval_cycles;
-                    // remote_compute_lat_arr_per_sec[step_index_per_sec] = (double)remote_compute_time * 1000000.0 / (double)nb_rx_pkts / (double)remote_interval_cycles;
+                    lat_arr_per_sec[step_index_per_sec] = (double)lat * 1000000.0 / (double)nb_rx_pkts / (double)hz;
                     step_index_per_sec ++;
                     if (step_index_per_sec == latency_size_per_sec - 1) {
                         step_index_per_sec = 0;
@@ -504,11 +466,7 @@ int main(int argc, char **argv) {
 
             // Print per second 99 tail latency
             qsort(lat_arr_per_sec, count_per_sec, sizeof(double), cmpfunc);
-            // qsort(remote_access_lat_arr_per_sec, count_per_sec, sizeof(double), cmpfunc);
-            // qsort(remote_compute_lat_arr_per_sec, count_per_sec, sizeof(double), cmpfunc);
             printf("99%% e2e tail latency: %.3f us\n", lat_arr_per_sec[(int) (0.99 * count_per_sec)]);
-            // printf("99%% remote mem access tail latency: %.3f us\n", remote_access_lat_arr_per_sec[(int) (0.99 * count_per_sec)]);
-            // printf("99%% remote compute access tail latency: %.3f us\n", remote_compute_lat_arr_per_sec[(int) (0.99 * count_per_sec)]);
             full_flag = 0;
             count_per_sec = 0;
             step_index_per_sec = 0;
@@ -538,12 +496,8 @@ int main(int argc, char **argv) {
     // Print latency stats
     if (latency_size != 0) {
         double total_lat = 0.0;
-        // double total_access_lat = 0.0;
-        // double total_compute_lat = 0.0;
 
         uint32_t valid_latency_size = 0;
-        // uint32_t valid_access_latency_size = 0;
-        // uint32_t valid_compute_latency_size = 0;
 
         for (int i = 0; i < latency_count; i++) {
             if (lat_arr[i] < 500000000) {
@@ -551,20 +505,6 @@ int main(int argc, char **argv) {
                 valid_latency_size ++;
             }
         }
-
-        // for (int i = 0; i < latency_count; i++) {
-        //     if (remote_access_lat_arr[i] < 5000) {
-        //         total_access_lat += remote_access_lat_arr[i];
-        //         valid_access_latency_size ++;
-        //     }
-        // }
-
-        // for (int i = 0; i < latency_count; i++) {
-        //     if (remote_compute_lat_arr[i] < 5000) {
-        //         total_compute_lat += remote_compute_lat_arr[i];
-        //         valid_compute_latency_size ++;
-        //     }
-        // }
 
         qsort(lat_arr, latency_count, sizeof(double), cmpfunc);
         printf("==== E2E Latency ====\n");
@@ -581,49 +521,11 @@ int main(int argc, char **argv) {
         printf("95%% tail latency: %.3f us\n", lat_arr[(int) (0.95 * latency_count)]);
         printf("99%% tail latency: %.3f us\n", lat_arr[(int) (0.99 * latency_count)]);
         printf("max%% tail latency: %.3f us\n", lat_arr[(int) (latency_count - 1)]);
-
-        // qsort(remote_access_lat_arr, latency_count, sizeof(double), cmpfunc);
-        // printf("==== Remote server mem access Latency ====\n");
-        // printf("Total latency size: %d\n", latency_count);
-        // printf("Step index: %d\n", step_index);
-        // printf("Total latency: %.3f us\n", total_access_lat);
-        // printf("Valid latency size: %u\n", valid_access_latency_size);
-        // printf("Average latency: %.3f us\n", (double)total_access_lat/valid_access_latency_size);
-        // printf("min%% tail latency: %.3f us\n", remote_access_lat_arr[(int) 0]);
-        // printf("25%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (0.25 * latency_count)]);
-        // printf("50%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (0.50 * latency_count)]);
-        // printf("75%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (0.75 * latency_count)]);
-        // printf("90%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (0.9 * latency_count)]);
-        // printf("95%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (0.95 * latency_count)]);
-        // printf("99%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (0.99 * latency_count)]);
-        // printf("max%% tail latency: %.3f us\n", remote_access_lat_arr[(int) (latency_count - 1)]);
-
-        // qsort(remote_compute_lat_arr, latency_count, sizeof(double), cmpfunc);
-        // printf("==== Remote server compute Latency ====\n");
-        // printf("Total latency size: %d\n", latency_count);
-        // printf("Step index: %d\n", step_index);
-        // printf("Total latency: %.3f us\n", total_compute_lat);
-        // printf("Valid latency size: %u\n", valid_compute_latency_size);
-        // printf("Average latency: %.3f us\n", (double)total_compute_lat/valid_compute_latency_size);
-        // printf("min%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) 0]);
-        // printf("25%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (0.25 * latency_count)]);
-        // printf("50%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (0.50 * latency_count)]);
-        // printf("75%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (0.75 * latency_count)]);
-        // printf("90%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (0.9 * latency_count)]);
-        // printf("95%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (0.95 * latency_count)]);
-        // printf("99%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (0.99 * latency_count)]);
-        // printf("max%% tail latency: %.3f us\n", remote_compute_lat_arr[(int) (latency_count - 1)]);
     }
 
     // free latency arrays
     free(lat_arr_per_sec);
     free(lat_arr);
-
-    // free(remote_access_lat_arr_per_sec);
-    // free(remote_access_lat_arr);
-
-    // free(remote_compute_lat_arr_per_sec);
-    // free(remote_compute_lat_arr);
 
     return EXIT_SUCCESS;
 }

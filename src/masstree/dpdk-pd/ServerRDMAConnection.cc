@@ -59,7 +59,7 @@ ServerRDMAConnection::pp_init_ctx(struct ibv_device *ib_dev, int rx_depth,
   ctx->send_flags = IBV_SEND_SIGNALED;
   ctx->rx_depth = rx_depth;
 
-  for (int j = 0; j < recv_bufs_num; j++) {
+  for (int j = 0; j < 2 * recv_bufs_num; j++) {
     // buf_recv[j] = (char *)memalign(page_size, 4096);
     // if (!buf_recv[j]) {
     //   fprintf(stderr, "Couldn't allocate work buf.\n");
@@ -112,7 +112,7 @@ ServerRDMAConnection::pp_init_ctx(struct ibv_device *ib_dev, int rx_depth,
     goto clean_comp_channel;
   }
 
-  for (int j = 0; j < recv_bufs_num; j++) {
+  for (int j = 0; j < 2 * recv_bufs_num; j++) {
     // mr_recv[j] = ibv_reg_mr(ctx->pd, buf_recv[j], 4096,
     // IBV_ACCESS_LOCAL_WRITE); if (!mr_recv[j]) {
     //   fprintf(stderr, "Couldn't register MR\n");

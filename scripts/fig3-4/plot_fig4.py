@@ -7,10 +7,10 @@ import pandas as pd
 import glob
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/user/ISCA-2025-DLB")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "user")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "a")         # REVIEWER_ID to determine directory name
+reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determine directory name
 user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 #!/usr/bin/env python3

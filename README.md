@@ -52,7 +52,7 @@ Our artifact contains all source files for \system and provides instructions on 
 ---
 
 ## 🚀 Experiment Workflow
-For ISCA 2025 AE, we have already cloned this repo under `/home/isca25_ae/` and built all the necessary drivers, libraries, and benchmarks on server, client, and snic. You can skip installation step 2.
+For ISCA 2025 AE, we have already cloned this repo under `/home/isca25_ae/` and built all the necessary drivers, libraries, and benchmarks on server, client, and snic. You can skip step 1 and 2.
 
 ### 1. Kernel boot parameter
 Please make sure the following kernel boot parameters are properly set `/etc/default/grub`. 
@@ -72,12 +72,11 @@ $ sudo reboot
     ```
     git clone https://github.com/ece-fast-lab/ISCA-2025-DLB
     cd ISCA-2025-DLB
-    git submodule update --init --recursive
-    git pull --recurse-submodules
+    git submodule update --remote
     ```
 2. Build all necessary drivers, libraries, and benchmarks
     ```
-    scripts/common/build_all.sh
+    scripts/common/build_all.sh {server|snic|client}
     ```
 
 

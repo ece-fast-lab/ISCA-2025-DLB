@@ -1,62 +1,55 @@
 #!/bin/bash
 set -e
 
-source env_setup.sh
-
-cd "$DPDK_DIR"
-
-###### Build DLB Drivers and libdlb ######
-DLB_DIR="$REPO_PATH/src/dlb_8.9.0"
-cd "$DLB_DIR/driver/dlb2"
-make clean
-make
-
-cd "pmem"
-make clean
-make
-
-cd "$DLB_DIR/libdlb"
-make clean
-make lib
-
-###### Build DPDK ######
-DPDK_DIR="$REPO_PATH/src/dpdk-22.11.2-dlb/dpdk-stable-22.11.2"
-DPDK_BUILD_DIR="build"
-
-cd "$DPDK_DIR"
-
-if [ -d "$DPDK_BUILD_DIR" ]; then
-    echo "Removing previous build directory: $DPDK_BUILD_DIR"
-    rm -rf "$DPDK_BUILD_DIR"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 {server|snic|client}"
+    exit 1
 fi
 
-# Configure the build using Meson.
-echo "Configuring DPDK build with Meson..."
-meson setup -Dexamples=all "$DPDK_BUILD_DIR"
+host="$1"
 
-# Build DPDK using Ninja.
-echo "Building DPDK with Ninja..."
-ninja -C "$DPDK_BUILD_DIR"
+# Validate the input
+if [[ "$host" != "server" && "$host" != "snic" && "$host" != "client" ]]; then
+    echo "Invalid host specified. Valid options are: server, snic, client."
+    exit 1
+fi
 
-echo "DPDK build completed."
-
-
-###### Build dpdk Bench ######
-export PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig/
-DPDK_BENCH_DIR="$REPO_PATH/src/dlb_bench/dpdk_bench"
-cd "$DPDK_BENCH_DIR/dpdk-rx"
-make clean
-make
-
-cd "$DPDK_BENCH_DIR/dpdk-tx"
-make clean
-make
+echo "Compile for host: $host"
 
 
-###### Build libdlb Bench ######
-DLB_BENCH_DIR="$REPO_PATH/src/dlb_bench/libdlb_bench"
-cd "$DLB_BENCH_DIR"
-make clean
-make
+source env_setup.sh
 
 
+###### Build DLB Drivers and libdlb ######
+# bash "$REPO_PATH/scripts/common/build_dlb.sh"
+
+###### Build DPDK ######
+# bash "$REPO_PATH/scripts/common/build_dpdk.sh"
+
+
+###### Build dpdk bench, libdlb bench, and DirectAcc ######
+case "$host" in
+    server)
+        bash $REPO_PATH/scripts/common/build_bench.sh server
+        ;;
+    snic)
+        bash $REPO_PATH/scripts/common/build_directacc.sh snic
+        ;;
+    client)
+        bash $REPO_PATH/scripts/common/build_bench.sh client
+        ;;
+esac
+
+
+###### Build Masstree ######
+case "$host" in
+    server)
+        bash $REPO_PATH/scripts/common/build_masstree.sh server
+        ;;
+    snic)
+        bash $REPO_PATH/scripts/common/build_masstree.sh snic
+        ;;
+    client)
+        bash $REPO_PATH/scripts/common/build_masstree.sh client
+        ;;
+esac

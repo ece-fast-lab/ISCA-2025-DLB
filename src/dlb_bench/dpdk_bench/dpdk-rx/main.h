@@ -16,12 +16,12 @@
 #include <sys/ipc.h>
 
 // Configurable number of RX/TX ring descriptors
-#define RX_DESC_DEFAULT 1024
-#define TX_DESC_DEFAULT 1024
+#define RX_DESC_DEFAULT 4096
+#define TX_DESC_DEFAULT 4096
 
-#define NUM_MBUFS 1024
+#define NUM_MBUFS 4095
 #define MBUF_CACHE_SIZE 512
-#define BURST_SIZE 8
+#define BURST_SIZE 64
 
 #define MAX_RX_CORES 128
 #define MAX_TIME 1000
@@ -219,7 +219,7 @@ static inline void delay_nanoseconds(uint64_t nanoseconds) {
     do {
         end_time = rte_get_timer_cycles();
         elapsed_nanoseconds = end_time - start_time;
-    } while (elapsed_nanoseconds < cycles);
+    } while (elapsed_nanoseconds < cycles && (keep_receiving));
 }
 
 static inline void delay_cycles(uint64_t cycles) {
@@ -230,7 +230,7 @@ static inline void delay_cycles(uint64_t cycles) {
     do {
         end_time = rte_get_timer_cycles();
         elapsed_cycles = end_time - start_time;
-    } while (elapsed_cycles < cycles);
+    } while (elapsed_cycles < cycles && (keep_receiving));
 }
 
 // Parse arguments

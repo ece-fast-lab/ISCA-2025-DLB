@@ -15,25 +15,6 @@ static int lcore_rx_worker(void *arg)
         rx_index -= 1;
     }
 
-    // void *state;
-    // switch(app_id) {
-    //     case 1:
-    //         state = (struct _matchinfo *)malloc(sizeof(struct _matchinfo) * TOTAL_MATCH);
-    //         bm25_init(state, app_arg1);
-    //         break;
-    //     case 2:
-    //         state = malloc(sizeof(struct _bayes_state));
-    //         bayes_init(state, app_arg1);
-    //         break;
-    //     case 3:
-    //         state = malloc(sizeof(struct _knn_node) * app_arg1);
-    //         knn_init(state, app_arg1);
-    //         break;
-    //     default:
-    //         break;
-    // }
-
-
     printf("lcore %2u (lcore index %2u, RX index %2u) starts to receive packets\n",
            lcore_id, lcore_index, rx_index);
 
@@ -70,9 +51,10 @@ static int lcore_rx_worker(void *arg)
         for (int i = 0; i < nb_rx; i++) {
             cur_tsc = rte_get_timer_cycles();
             // =========== Perform dummy process
-            dummy_process_delay = *(uint64_t *)(rte_pktmbuf_mtod_offset(bufs[i], char *, offset));
+            dummy_process_delay = *(rte_pktmbuf_mtod_offset(bufs[i], uint64_t *, offset));
+            uint64_t start_ts = *(rte_pktmbuf_mtod_offset(bufs[i], uint64_t *, offset+sizeof(uint64_t)));
             // rte_delay_us_sleep(1);
-            // printf("dummy process delay is %lu\n", dummy_process_delay);
+            // printf("dummy process delay is %lu\n", start_ts);
             if (dummy_process_delay > 0) {
                 delay_cycles(dummy_process_delay);
                 // printf("dummy process delay is %lu\n", dummy_process_delay);
@@ -82,27 +64,6 @@ static int lcore_rx_worker(void *arg)
                     delay_cycles(dummy_process_delay);
             }
             // ================================
-
-            /***** application start *****/ 
-            // char *payload;
-            // payload = rte_pktmbuf_mtod_offset(bufs[i], char *, offset);
-            // switch(app_id) {
-            //     case 0:
-            //         delay_nanoseconds(dummy_delay);
-            //         break;
-            //     case 1:
-            //         bm25_exec(state);
-            //         break;
-            //     case 2:
-            //         bayes_exec(state, app_arg1);
-            //         break;
-            //     case 3:
-            //         knn_exec(state, app_arg1, app_arg2);
-            //         break;
-            //     default:
-            //         break;
-            // }
-            /***** application end *****/ 
         
             if (latency_size != 0) {
                 // latency test, send back packets
@@ -120,11 +81,6 @@ static int lcore_rx_worker(void *arg)
                     rte_pktmbuf_free(bufs[i]);
                 }
                 
-                // if (likely(nb_tx < nb_rx)) {
-                //     uint16_t buf;
-                //     for (buf = nb_tx; buf < nb_rx; buf++)
-                //         rte_pktmbuf_free(bufs[buf]);
-                // }
             } else {
                 rte_pktmbuf_free(bufs[i]);
             }
@@ -149,20 +105,6 @@ static int lcore_rx_worker(void *arg)
         }
 
     }
-
-    // switch(app_id) {
-    //     case 1:
-    //         bm25_free(state);
-    //         break;
-    //     case 2:
-    //         bayes_free(state, app_arg1);
-    //         break;
-    //     case 3:
-    //         knn_free(state);
-    //         break;
-    //     default:
-    //         break;
-    // }
 
     return 0;
 }
@@ -211,7 +153,7 @@ int main(int argc, char **argv)
 
     // Create a memory pool
     struct rte_mempool *mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL",
-                                                            NUM_MBUFS * rx_lcore_count,
+                                                            NUM_MBUFS * rx_lcore_count * 4,
 		                                                    MBUF_CACHE_SIZE,
                                                             0,
                                                             RTE_MBUF_DEFAULT_BUF_SIZE,

@@ -14,10 +14,10 @@ import statistics
 
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/user/ISCA-2025-DLB")
-ssh_user = os.environ.get("HOST_ACCOUNT", "user")
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")
-reviewer_id = os.environ.get("REVIEWER_ID", "a")
+reviewer_id = os.environ.get("REVIEWER_ID", "x")
 user_password = os.environ.get("PASSWORD", "123456")
 
 color_map = {

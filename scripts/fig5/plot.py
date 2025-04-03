@@ -5,10 +5,10 @@ import pandas as pd
 import os
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/user/ISCA-2025-DLB")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "user")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "a")         # REVIEWER_ID to determine directory name
+reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determine directory name
 user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 # Directory containing the results
@@ -65,8 +65,8 @@ for filename in os.listdir(directory):
 df = pd.DataFrame(data)
 
 # Plotting
-plt.figure(figsize=(8, 4))
 plt.rcParams.update({'font.size': 20})
+plt.figure(figsize=(8, 4))
 bar_width = 0.2
 
 technologies = df['Technology'].unique()
@@ -77,12 +77,14 @@ new_df = df[(((df['Technology'] == 'sw') & (df['Packet Rate (MPPS)'] < 80)) |
     ((df['Technology'] == 'distributor') & (df['Packet Rate (MPPS)'] < 80)) |
     (df['Technology'] == 'rss') |
     (df['Technology'] == 'dlb') )
+    & (df['99th Percentile Latency (us)'] < 10000)
     & (df['Delay'] == '100') 
     & (df['Distribution'] == 'exponential')]
 
 
 # Plotting: x-axis is Actual Throughput and y-axis is 99th Percentile Latency,
 # grouping by Technology. Each group is connected by a line.
+plt.rcParams.update({'font.size': 20})
 plt.figure(figsize=(8, 4))
 
 color_map = {
@@ -99,8 +101,8 @@ for tech, group in new_df.groupby('Technology'):
     plt.plot(group_sorted['Actual Throughput (MPPS)'].to_numpy(), 
          group_sorted['99th Percentile Latency (us)'].to_numpy(), 
          marker='o', linestyle='-', linewidth=2.5, label=tech, color=color_map[tech])
-plt.xlabel('Throughput (MPPS)', fontsize=12)
-plt.ylabel('p99 Latency (us)', fontsize=12)
+plt.xlabel('Throughput (MPPS)')
+plt.ylabel('p99 Latency (us)')
 # plt.title('99th Percentile Latency vs. Actual Throughput by Technology', fontsize=14)
 # plt.legend(loc="upper right", ncol=2, frameon=False, fontsize='17')
 

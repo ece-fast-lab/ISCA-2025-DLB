@@ -6,6 +6,11 @@ CXXFLAGS = @CXXFLAGS@
 RANLIB = @RANLIB@
 DEPSDIR := .deps
 DEPCFLAGS = -MD -MF $(DEPSDIR)/$*.d -MP
+
+# DPDK specific variables
+DPDK_CFLAGS = $(shell pkg-config --cflags libdpdk)
+DPDK_LIBS   = $(shell pkg-config --libs libdpdk)
+
 ifeq ($(strip $(MEMMGR)), )
   MEMMGR = @MALLOC_LIBS@
 endif
@@ -18,16 +23,16 @@ endif
 ifneq ($(strip $(NOSUPERPAGE)), )
   CPPFLAGS += -DNOSUPERPAGE
 endif
-LIBS = @LIBS@ -lpthread -lm
+LIBS = @LIBS@ -lpthread -lm -libverbs -lrt $(DPDK_LIBS)
 LDFLAGS = @LDFLAGS@
 
 all: test_atomics mtd mtclient mttest
 
 %.o: %.c config.h $(DEPSDIR)/stamp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(DEPCFLAGS) -include config.h -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(DEPCFLAGS) $(DPDK_CFLAGS) -include config.h -c -o $@ $<
 
 %.o: %.cc config.h $(DEPSDIR)/stamp
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(DEPCFLAGS) -include config.h -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(DEPCFLAGS) $(DPDK_CFLAGS) -include config.h -c -o $@ $<
 
 %.S: %.o
 	objdump -S $< > $@
@@ -82,7 +87,7 @@ configure config.h.in: configure.ac
 	touch config.h.in
 
 config.status: configure
-	./configure @ac_configure_args@
+	./configure '--disable-assertions' @ac_configure_args@
 
 $(DEPSDIR)/stamp:
 	mkdir -p $(DEPSDIR)

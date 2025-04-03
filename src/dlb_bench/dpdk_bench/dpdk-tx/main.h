@@ -15,14 +15,14 @@
 #include <math.h>
 
 // Configurable number of RX/TX ring descriptors
-#define RX_DESC_DEFAULT 1024
-#define TX_DESC_DEFAULT 1024
+#define RX_DESC_DEFAULT 4096
+#define TX_DESC_DEFAULT 4096
 
 #define MTU_SIZE 1500
 
 #define RATE_NUM 600
 
-#define NUM_MBUFS 2047
+#define NUM_MBUFS 4095
 #define MBUF_CACHE_SIZE 512
 #define BURST_SIZE 64
 #define MAX_TX_CORES 128
@@ -30,7 +30,17 @@
 #define PI 3.14159265358979323846
 
 static const struct rte_eth_conf port_conf_default = {
-	.txmode = {
+    .rxmode = {
+        .mq_mode = RTE_ETH_MQ_RX_RSS,
+	    .max_lro_pkt_size = RTE_ETHER_MAX_LEN,
+    },
+    .rx_adv_conf = {
+        .rss_conf = {
+            .rss_key = NULL,
+            .rss_hf = RTE_ETH_RSS_IP | RTE_ETH_RSS_UDP | RTE_ETH_RSS_TCP,
+        }
+    },
+    .txmode = {
         .mq_mode = RTE_ETH_MQ_TX_NONE
     }
 };
@@ -145,7 +155,7 @@ uint64_t generateDelay() {
             break;
         case 3:
             // lambda
-            dist_delay = generateExponentialDist(1/dummy_process_delay);
+            dist_delay = generateExponentialDist(1.0/dummy_process_delay);
             break;
         case 4:
             // lambda
@@ -338,12 +348,12 @@ static int port_init(uint16_t port, struct rte_mempool *mbuf_pool,
     my_ether_addr = addr;
 
     // Enable RX in promiscuous mode for the Ethernet device.
-    retval = rte_eth_promiscuous_enable(port);
-    // End of setting RX port in promiscuous mode.
-    if (retval != 0) {
-        fprintf(stderr, "rte_eth_promiscuous_enable failed\n");
-        return retval;
-    }
+    // retval = rte_eth_promiscuous_enable(port);
+    // // End of setting RX port in promiscuous mode.
+    // if (retval != 0) {
+    //     fprintf(stderr, "rte_eth_promiscuous_enable failed\n");
+    //     return retval;
+    // }
 
     return 0;
 }

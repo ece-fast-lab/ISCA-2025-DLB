@@ -69,7 +69,7 @@ public:
 	const char                *servername = NULL;
 	unsigned int             connect_port = 18515;
 	int                      ib_port = 1;
-	unsigned int             rx_depth = 200+1; //SCALE UP IF LOADING ONLY ONE SERVER CORE
+	unsigned int             rx_depth = 1024; //SCALE UP IF LOADING ONLY ONE SERVER CORE
 	//unsigned int             size = 20;
 	unsigned long long int   iters = 10000000;
 	int                      use_event = 0;
@@ -84,12 +84,12 @@ public:
 	int gidx = 3;
 	int page_size = sysconf(_SC_PAGESIZE);
 
-	static const int recv_bufs_num = 200;//768+1;
+	static const int recv_bufs_num = 1024;//768+1;
 	char * buf_recv [recv_bufs_num];
 	struct ibv_mr* mr_recv [recv_bufs_num];
 
-	char * buf_send [recv_bufs_num];
-	struct ibv_mr* mr_send [recv_bufs_num];
+	char * buf_send [2 * recv_bufs_num];
+	struct ibv_mr* mr_send [2 * recv_bufs_num];
 
 };
 

@@ -90,13 +90,13 @@
 #define debug 0
 #endif
 
-#define NUM_MBUFS ((64 * 1024) - 1)
+#define NUM_MBUFS (2 * 1024)
 #define MBUF_CACHE_SIZE 128
 #define RING_SIZE 1024
 #define RING_CACHE_SIZE 256
 #define RECV_RING_NAME "recv_dist_ring"
 #define RETURN_RING_NAME "mbuf_return_ring"
-#define BURST_SIZE 32
+#define BURST_SIZE 128
 
 struct rte_distributor *distributor = NULL;
 struct rte_mempool *mbuf_pool = NULL;
@@ -916,7 +916,7 @@ int main(int argc, char *argv[]) {
   }
   mbuf_return_ring =
       rte_ring_create(RETURN_RING_NAME, RING_SIZE, rte_socket_id(),
-                      RING_F_SP_ENQ | RING_F_SC_DEQ);
+                      RING_F_MP_RTS_ENQ | RING_F_SC_DEQ);
   if (mbuf_return_ring == NULL) {
     fprintf(stderr, "Cannot create return ring\n");
     exit(1);
@@ -1506,27 +1506,31 @@ static int receiver_thread(void *arg) {
 
   const int num_bufs = conn->recv_bufs_num;
   struct ibv_wc wc[num_bufs];
-  struct rte_mbuf *mbufs[num_bufs];
+  struct rte_mbuf *mbufs[2 * num_bufs];
   struct ibv_recv_wr wrs[num_bufs];
   struct ibv_sge sges[num_bufs];
-  int ret;
+  int ret, ne = 0;
 
   printf("Receiver thread started\n");
 
   // Bulk allocate mbufs
-  if (rte_pktmbuf_alloc_bulk(mbuf_pool, mbufs, num_bufs) != 0) {
+  if (rte_pktmbuf_alloc_bulk(mbuf_pool, mbufs, 2 * num_bufs) != 0) {
     fprintf(stderr, "Failed to allocate %d mbufs\n", num_bufs);
     return -1;
   }
 
   // Register mbufs with RDMA
-  for (int i = 0; i < num_bufs; i++) {
+  for (int i = 0; i < 2 * num_bufs; i++) {
     ret = register_mbuf_mr(mbufs[i], conn->ctx->pd);
     if (ret) {
       fprintf(stderr, "Failed to register mbuf %d\n", i);
       return -1;
     }
+    struct mbuf_metadata *meta =
+        (struct mbuf_metadata *)rte_mbuf_to_priv(mbufs[i]);
+    meta->msg_id = i;
   }
+  rte_pktmbuf_free_bulk(&mbufs[num_bufs], num_bufs);
 
   // Set RSS tags
   for (int i = 0; i < num_bufs; i++) {
@@ -1555,7 +1559,7 @@ static int receiver_thread(void *arg) {
     wrs[i].num_sge = 1;
     wrs[i].next = (i < num_bufs - 1) ? &wrs[i + 1] : NULL;
 
-    meta->msg_id = i;
+    // meta->msg_id = i;
   }
 
   struct ibv_recv_wr *bad_wr = NULL;
@@ -1571,7 +1575,11 @@ static int receiver_thread(void *arg) {
     struct rte_mbuf *returned_mbufs[BURST_SIZE];
     unsigned int nb_returned = rte_ring_dequeue_burst(
         mbuf_return_ring, (void **)returned_mbufs, BURST_SIZE, NULL);
+    // unsigned int nb_returned = ne;
+    // if (ne > 0) {
+    // rte_pktmbuf_alloc_bulk(mbuf_pool, returned_mbufs, ne);
     if (nb_returned > 0) {
+      // if (true) {
       // Prepare batch of receive work requests for returned mbufs
       for (unsigned int i = 0; i < nb_returned; i++) {
         struct mbuf_metadata *meta =
@@ -1595,9 +1603,10 @@ static int receiver_thread(void *arg) {
         conn->routs += nb_returned;
       }
     }
+    // }
 
     // Poll for new completions
-    int ne = ibv_poll_cq(conn->ctx->cq, num_bufs, wc);
+    ne = ibv_poll_cq(conn->ctx->cq, num_bufs, wc);
     if (ne < 0) {
       fprintf(stderr, "poll CQ failed %d\n", ne);
       break;
@@ -1627,12 +1636,17 @@ static int receiver_thread(void *arg) {
 
     // Enqueue batch of messages if we have any
     if (msg_count > 0) {
-      unsigned int nb_enqueued = rte_ring_enqueue_burst(
-          recv_dist_ring, (void **)recv_mbufs, msg_count, NULL);
-      if (nb_enqueued < msg_count) {
-        fprintf(stderr,
-                "Failed to enqueue all messages: only enqueued %u of %d\n",
-                nb_enqueued, msg_count);
+      unsigned int remaining = msg_count;
+      unsigned int offset = 0;
+
+      while (remaining > 0) {
+        unsigned int nb_enqueued = rte_ring_enqueue_burst(
+            recv_dist_ring, (void **)(recv_mbufs + offset), remaining, NULL);
+
+        if (nb_enqueued > 0) {
+          remaining -= nb_enqueued;
+          offset += nb_enqueued;
+        }
       }
     }
   }
@@ -1661,24 +1675,33 @@ static int distributor_thread(void *arg) {
     if (nb_rx > 0) {
 
       // Distribute packets to workers
-      int ret = rte_distributor_process(distributor, mbufs, nb_rx);
-      if (ret < 0) {
-        fprintf(stderr, "Failed to distribute packets\n");
+      int process_count = 0;
+      while (process_count < nb_rx) {
+        process_count += rte_distributor_process(
+            distributor, &mbufs[process_count], nb_rx - process_count);
       }
 
       // Get returned mbufs from workers
-      struct rte_mbuf *returned_mbufs[BURST_SIZE];
-      uint16_t nb_returns = rte_distributor_returned_pkts(
-          distributor, returned_mbufs, BURST_SIZE);
+      // struct rte_mbuf *returned_mbufs[BURST_SIZE];
+      // uint16_t nb_returns = rte_distributor_returned_pkts(
+      //     distributor, returned_mbufs, BURST_SIZE);
 
       // Return processed mbufs back to receiver thread
-      if (nb_returns > 0) {
-        ret = rte_ring_enqueue_burst(mbuf_return_ring, (void **)returned_mbufs,
-                                     nb_returns, NULL);
-        if (ret < nb_returns) {
-          fprintf(stderr, "Failed to return all mbufs to receiver\n");
-        }
-      }
+      // if (nb_returns > 0) {
+      //   unsigned int remaining = nb_returns;
+      //   unsigned int offset = 0;
+      //
+      //   while (remaining > 0) {
+      //     unsigned int nb_enqueued = rte_ring_enqueue_burst(
+      //         mbuf_return_ring, (void **)(returned_mbufs + offset),
+      //         remaining, NULL);
+      //
+      //     if (nb_enqueued > 0) {
+      //       remaining -= nb_enqueued;
+      //       offset += nb_enqueued;
+      //     }
+      //   }
+      // }
     }
   }
 
@@ -1738,7 +1761,9 @@ static int udp_threadfunc(void *x) {
 
     // Receive batch of work from distributor
     // printf("lcore: %d\n", tdata->lcore);
-    nb_rx = rte_distributor_get_pkt(distributor, tdata->id, bufs, bufs, nb_rx);
+    // nb_rx = rte_distributor_get_pkt(distributor, tdata->id, bufs, bufs,
+    // nb_rx);
+    nb_rx = rte_distributor_get_pkt(distributor, tdata->id, bufs, NULL, 0);
     // printf("Received %d packets\n", nb_rx);
 
     for (uint16_t i = 0; i < nb_rx; i++) {
@@ -1777,13 +1802,29 @@ static int udp_threadfunc(void *x) {
           } else {
             fprintf(stderr, "Couldn't post send response\n");
           }
-        }
+        } else
+          printf("parser failed \n");
         ti->rcu_stop();
-      }
-
-      // Free the mbuf
-      // rte_pktmbuf_free(bufs[i]);
+      } else
+        printf("parser failed \n");
     }
+    // Return processed mbufs back to receiver thread
+    if (nb_rx > 0) {
+      unsigned int remaining = nb_rx;
+      unsigned int offset = 0;
+
+      while (remaining > 0) {
+        unsigned int nb_enqueued = rte_ring_enqueue_burst(
+            mbuf_return_ring, (void **)(bufs + offset), remaining, NULL);
+
+        if (nb_enqueued > 0) {
+          remaining -= nb_enqueued;
+          offset += nb_enqueued;
+        }
+      }
+    }
+    // Free the mbuf
+    // rte_pktmbuf_free_bulk(bufs, nb_rx);
   }
 
   // Cleanup
