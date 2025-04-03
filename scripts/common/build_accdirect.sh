@@ -12,10 +12,10 @@ fi
 source env_setup.sh
 
 
-###### Build DirectAcc ######
-DIRECT_ACC_DIR="$REPO_PATH/src/directacc"
+###### Build AccDirect ######
+DIRECT_ACC_DIR="$REPO_PATH/src/accdirect"
 
-## offload directacc
+## offload accdirect
 cd "$DIRECT_ACC_DIR/offload-rdma-dlb"
 case "$host" in
     server)

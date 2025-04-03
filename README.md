@@ -1,10 +1,10 @@
 # ISCA-2025-DLB
 
-Our artifact contains all source files for \system and provides instructions on how to reproduce key experimental results shown in the paper. There are three key sets of experiments: 
+Our artifact contains all source files for AccDirect and provides instructions on how to reproduce key experimental results shown in the paper. There are three key sets of experiments: 
 
 1️⃣ Experiments that evaluate the throughput and p99 latency of existing intra-host load balancers with both core-to-core and end-to-end setups (Fig. 3, 4, 5).
 
-2️⃣ Experiments showing the benefits of using \system in p99 latency, throughput, and power saving (Fig. 9, 10).
+2️⃣ Experiments showing the benefits of using AccDirect in p99 latency, throughput, and power saving (Fig. 9, 10).
 
 3️⃣ Microbenchmark experiments that justify the guidelines to make the best use of DLB (Fig. 11, 12, 13).
 

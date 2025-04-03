@@ -14,7 +14,7 @@ reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determ
 user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 dir_name = f"{repo_path}/scripts/fig9/results_{reviewer_id}/acc"
-exe_path = f"{repo_path}/src/directacc/offload-rdma-dlb"  # Path to the executable directory
+exe_path = f"{repo_path}/src/accdirect/offload-rdma-dlb"  # Path to the executable directory
 
 # Configuration variables
 server_threads_list = [8]

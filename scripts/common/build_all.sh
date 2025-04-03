@@ -27,13 +27,13 @@ source env_setup.sh
 # bash "$REPO_PATH/scripts/common/build_dpdk.sh"
 
 
-###### Build dpdk bench, libdlb bench, and DirectAcc ######
+###### Build dpdk bench, libdlb bench, and AccDirect ######
 case "$host" in
     server)
         bash $REPO_PATH/scripts/common/build_bench.sh server
         ;;
     snic)
-        bash $REPO_PATH/scripts/common/build_directacc.sh snic
+        bash $REPO_PATH/scripts/common/build_accdirect.sh snic
         ;;
     client)
         bash $REPO_PATH/scripts/common/build_bench.sh client
