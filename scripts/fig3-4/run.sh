@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+# set -e
 
 source ../common/setup_libdlb_dlb2.sh
 

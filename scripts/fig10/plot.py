@@ -6,10 +6,11 @@ import re
 import os
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/jiaqil6/ISCA-2025-DLB-draft")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "jiaqil6")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "b")         # REVIEWER_ID to determine directory name
+ssh_snic = os.environ.get("SNIC_SSH_IP", "192.17.100.19")     # Optionally read SNIC IP from env
+reviewer_id = os.environ.get("REVIEWER_ID", "z")         # REVIEWER_ID to determine directory name
 user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 

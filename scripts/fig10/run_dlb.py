@@ -7,12 +7,12 @@ import os
 import paramiko
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/jiaqil6/ISCA-2025-DLB-draft")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "jiaqil6")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
 ssh_snic = os.environ.get("SNIC_SSH_IP", "192.17.100.19")     # Optionally read SNIC IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "b")         # REVIEWER_ID to determine directory name
-user_password = os.environ.get("PASSWORD", "1234!@#$")         # PASSWORD to use for sudo
+reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determine directory name
+user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 dir_name = f"{repo_path}/scripts/fig10/results_{reviewer_id}/dlb"
 
@@ -24,7 +24,7 @@ client_threads_list = [i for i in range(2, 10)]
 # client_threads_list = [2]
 ratio_list = [5]
 percent_list = [50]
-window_size_list = [10, 20, 30, 40, 50, 60]
+window_size_list = [20, 32, 40, 48, 64]
 
 # SSH connection settings
 server_hostname = ssh_host
@@ -77,6 +77,7 @@ for server_threads, client_threads, ratio, percent, window_size in combinations:
     # Run server command and extract QPN
     stdin, stdout, stderr = server_ssh.exec_command(server_command, get_pty=True)
     # Write the sudo password to stdin (it must be followed by a newline)
+    time.sleep(3)
     stdin.write(server_password + "\n")
     stdin.flush()
     print("Set up connection and run cmd on server...")
@@ -87,7 +88,7 @@ for server_threads, client_threads, ratio, percent, window_size in combinations:
         line = stdout.readline()
         if not line:
             break
-        # print(line)
+        # print(line.strip())  # Debug print to check server output
         qpn_match = re.search(r"\(int\)QPN (\d+)", line)
         if qpn_match:
             qpn = int(qpn_match.group(1))
@@ -104,10 +105,45 @@ for server_threads, client_threads, ratio, percent, window_size in combinations:
     time.sleep(10)
 
     # Run client command with extracted QPN
+    # client_command = client_command.replace("{qpn}", str(qpn))
+    # with open(f"{dir_path}/log.txt", "w") as log_file:
+    #     client_process = subprocess.Popen(client_command.split(), stdout=log_file)
+    # client_process.communicate()  # Wait for the client command to finish
+    # stdout.close()
+    # stdin.close()
+
+    # Run client command with extracted QPN
     client_command = client_command.replace("{qpn}", str(qpn))
-    with open(f"{dir_path}/log.txt", "w") as log_file:
-        client_process = subprocess.Popen(client_command.split(), stdout=log_file)
-    client_process.communicate()  # Wait for the client command to finish
+    max_retries = 2
+    retry_count = 0
+    while True:
+        with open(f"{dir_path}/log.txt", "w") as log_file:
+            # Capture both stdout and stderr
+            command = "stdbuf -oL " + client_command
+            client_process = subprocess.Popen(
+                command.split(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=1
+            )
+            
+            # Read and print output line by line in real time.
+            for line in iter(client_process.stdout.readline, ''):
+                print(line, end='', flush=True)  # Print to console immediately.
+                log_file.write(line)               # Write the same output to the log file.
+            
+            client_process.stdout.close()
+            client_process.wait()
+
+        with open(f"{dir_path}/log.txt", "r") as log_file:
+            log_contents = log_file.read()
+
+        if "timeout" in log_contents.lower() or "total RPS" not in log_contents or len(log_contents) == 0:
+            retry_count += 1
+            if retry_count < max_retries:
+                continue
+        break
     stdout.close()
     stdin.close()
     

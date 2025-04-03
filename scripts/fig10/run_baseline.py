@@ -7,12 +7,12 @@ import os
 import paramiko
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/jiaqil6/ISCA-2025-DLB-draft")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "jiaqil6")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
 ssh_snic = os.environ.get("SNIC_SSH_IP", "192.17.100.19")     # Optionally read SNIC IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "b")         # REVIEWER_ID to determine directory name
-user_password = os.environ.get("PASSWORD", "1234!@#$")         # PASSWORD to use for sudo
+reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determine directory name
+user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 dir_name = f"{repo_path}/scripts/fig10/results_{reviewer_id}/rss"
 
@@ -71,7 +71,7 @@ for server_threads, ratio, percent, window_size, client_threads in combinations:
     qpn = None
     while qpn is None:
         line = stdout.readline()
-        # print(line)
+        # print(line.strip())  # Debug print to check server output
         if not line:
             break
         qpn_match = re.search(r"\(int\)QPN (\d+)", line)

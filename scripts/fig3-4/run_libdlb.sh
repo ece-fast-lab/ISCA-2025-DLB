@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+# set -e
 
 # Source environment variables from env_setup.sh
 source ../common/env_setup.sh

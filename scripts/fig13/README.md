@@ -1,4 +1,5 @@
 # Figure 13
+Expected experiment time: 5mins
 
 1. Run experiment
 ```
