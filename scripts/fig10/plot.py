@@ -6,10 +6,10 @@ import re
 import os
 
 # Retrieve environment variables
-repo_path = os.environ.get("REPO_PATH", "/home/isca25_ae/ISCA-2025-DLB")  # Repository path from env_setup.sh
-ssh_user = os.environ.get("HOST_ACCOUNT", "isca25_ae")         # Use HOST_ACCOUNT from env_setup.sh
+repo_path = os.environ.get("REPO_PATH", "/home/jiaqil6/ISCA-2025-DLB-draft")  # Repository path from env_setup.sh
+ssh_user = os.environ.get("HOST_ACCOUNT", "jiaqil6")         # Use HOST_ACCOUNT from env_setup.sh
 ssh_host = os.environ.get("HOST_SSH_IP", "192.17.100.155")     # Optionally read server IP from env
-reviewer_id = os.environ.get("REVIEWER_ID", "x")         # REVIEWER_ID to determine directory name
+reviewer_id = os.environ.get("REVIEWER_ID", "b")         # REVIEWER_ID to determine directory name
 user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use for sudo
 
 
@@ -17,7 +17,7 @@ user_password = os.environ.get("PASSWORD", "123456")         # PASSWORD to use f
 total_rps_pattern = re.compile(r"total RPS\s*=\s*(\d+)")
 
 
-def extract_total_rps(log_file_path, threshold=0.4):
+def extract_total_rps(log_file_path, threshold=0.5):
     thread_rps = []
     with open(log_file_path, 'r') as f:
         for line in f:
@@ -102,7 +102,7 @@ def iterate_experiment_directories(base_dir):
     return data
 
 def group_data(df, group_size=5):
-    df = df[(df['p99'] < 200) & (df['window_size'] < 60)]
+    df = df[(df['p99'] < 100) & (df['window_size'] < 50) & (df['thread_num'] < 10) & (df['MRPS'] > 0.1)]
     df_sorted = df.sort_values(by='MRPS').reset_index(drop=True)
     grouped = df_sorted.groupby(df_sorted.index // group_size).agg({'MRPS': 'mean', 'p99': 'mean'}).reset_index(drop=True)
     return grouped
@@ -146,9 +146,9 @@ dlb['thread_num'] = dlb['thread_num'].astype(int)
 baseline['thread_num'] = baseline['thread_num'].astype(int)
 dpdk_pd['thread_num'] = dpdk_pd['thread_num'].astype(int)
 
-print(dlb.sort_values(by=['window_size']))
-print(baseline.sort_values(by=['window_size']))
-print(dpdk_pd.sort_values(by=['window_size']))
+# print(dlb.sort_values(by=['window_size']))
+# print(baseline.sort_values(by=['window_size']))
+# print(dpdk_pd.sort_values(by=['window_size']))
 
 unique_combinations = baseline[['ratio', 'percent']].drop_duplicates().reset_index(drop=True)
 # print(unique_combinations)
@@ -167,7 +167,7 @@ for index, row in unique_combinations.iterrows():
     baseline_f = baseline_f.sort_values(by=['MRPS'])
     dpdk_pd_f = dpdk_pd_f.sort_values(by=['MRPS'])
 
-    group_size = 1  # Adjust group size as needed for smoother curves
+    group_size = 1
     baseline_f = group_data(baseline_f, group_size)
     dpdk_pd_f = group_data(dpdk_pd_f, group_size)
     dlb_f = group_data(dlb_f, group_size)
@@ -180,11 +180,12 @@ for index, row in unique_combinations.iterrows():
     plt.plot(dlb_f['MRPS'].values, dlb_f['p99'].values, marker='o', linestyle='-', label='acc-dlb-lib', color='#E96115')
     plt.xlabel('MRPS')
     plt.ylabel('p99 Latency (us)')
+    plt.grid(True, linestyle='--', color='gray', alpha=0.5)
     # plt.legend(loc="upper left", ncol=1, frameon=True, fontsize='17')
     plt.legend(
         loc="upper center", 
         ncol=3, 
-        bbox_to_anchor=(0.5, 1.25),
+        bbox_to_anchor=(0.5, 1.28),
         frameon=True
         )
     plt.ylim(0, 60)

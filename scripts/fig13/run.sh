@@ -7,6 +7,8 @@ if [ -f "results_$REVIEWER_ID.log" ]; then
     rm "results_$REVIEWER_ID.log"
 fi
 
+sudo ../common/setup_libdlb_dlb2.sh
+
 exec > "$REPO_PATH/scripts/fig13/results_$REVIEWER_ID.log" 2>&1
 
 

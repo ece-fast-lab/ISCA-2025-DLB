@@ -1,4 +1,3 @@
-src/masstree/*/.git/
 *.d
 *.a
 *.o
@@ -13,7 +12,7 @@ src/masstree/*/.git/
 *.png
 .vscode/
 scripts/*/results_*/
-
+scripts/*/results_*.log
 
 src/dlb_bench/dpdk_bench/dpdk-rx/dpdk-rx
 src/dlb_bench/dpdk_bench/dpdk-tx/dpdk-tx
@@ -25,3 +24,18 @@ src/dlb_bench/libdlb_bench/ldb_traffic_ldb_port_rate_limit
 src/dlb_bench/libdlb_bench/ldb_traffic_qos
 src/dlb_bench/libdlb_bench/ldb_traffic_rate_limit
 src/dlb_bench/libdlb_bench/test_atomic_queue
+
+src/accdirect/*/rdma_dlb_server
+src/accdirect/*/rdma_dlb_snic
+src/accdirect/*/rdma_dlb_client
+
+src/masstree/*/.git/
+src/masstree/*/.deps/
+src/masstree/*/autom4te.cache/
+src/masstree/*/config.*
+src/masstree/*/configure~
+src/masstree/*/GNUmakefile
+src/masstree/*/mtclient
+src/masstree/*/mtd
+src/masstree/*/mttest
+src/masstree/*/test_atomics

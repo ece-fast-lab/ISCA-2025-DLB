@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######## UPDATE THE FOLLOWING VARIABLES ########
-export REVIEWER_ID='a' # reviewer ID
+export REVIEWER_ID='x' # reviewer ID
 ################################################
 
 export CLIENT_ACCOUNT=isca25_ae # client user account

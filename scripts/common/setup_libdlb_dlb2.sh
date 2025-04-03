@@ -4,6 +4,8 @@
 source ../common/env_setup.sh
 echo "performance" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 
+sudo ../common/unbind_dpdk_dlb2.sh
+
 DLB_DIR=$REPO_PATH/src/dlb_8.9.0
 
 cp $DLB_DIR/libdlb/libdlb.so /usr/lib/.
