@@ -89,7 +89,7 @@ b). Build all necessary drivers, libraries, and benchmarks for server, snic, or 
 Follow the instructions provided in each experiment folder to reproduce the figures in the paper. We recommend running the experiments in the following order, either on the server or on the client.
 1. Run DLB benchmarks on the server in `scripts/fig11e/`, `scripts/fig12/`, and `scripts/fig13/`.
 2. Run core-to-core experiments on the server in `scripts/fig3-4/`.
-3. Setup DLB driver on the server side with `sudo scripts/common/setup_libdlb_dlb2.sh`
+3. Setup DLB driver on the server side with `sudo ./setup_libdlb_dlb2.sh` in `scripts/common/`.
 4. Run end-to-end experiments on the client in `scripts/fig9/` and `scripts/fig10/`.
 
 
