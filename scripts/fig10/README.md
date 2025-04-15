@@ -1,4 +1,5 @@
 # Figure 10
+Expected experiment time: 6~8hrs
 
 1. Run experiment
 ```

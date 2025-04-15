@@ -2,6 +2,7 @@
 
 # Source environment variables from env_setup.sh
 source ../common/env_setup.sh
+sudo ../common/setup_libdlb_dlb2.sh
 echo "performance" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 if [ -f "results_$REVIEWER_ID.log" ]; then
     rm "results_$REVIEWER_ID.log"

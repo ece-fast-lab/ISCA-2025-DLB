@@ -72,6 +72,8 @@ mix_prio() {
 
 if [ $# -eq 0 ]; then
     echo "No arguments provided. Running packet_prio, queue_prio, and mix_prio in sequence."
+    sudo ../common/setup_libdlb_dlb2.sh
+
     packet_prio
     queue_prio
     mix_prio

@@ -1,4 +1,5 @@
 # Figure 9
+Expected experiment time: <1hr
 
 1. Set up DLB drivers on the server
 ```
