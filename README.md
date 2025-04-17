@@ -52,10 +52,12 @@ Our artifact contains all source files for AccDirect and provides instructions o
 ---
 
 ## 🚀 Experiment Workflow
-For ISCA 2025 AE, we have already cloned this repo under `/home/isca25_ae/` and built all the necessary drivers, libraries, and benchmarks on server, client, and snic. You can skip step 2.
+For setting up the environment and building from scratch, please follow steps 1, 2, and 3.
+
+For ISCA 2025 AE, we have already cloned this repo under `/home/isca25_ae/` and built all the necessary drivers, libraries, and benchmarks on server, client, and snic. You can skip step 2, and only perform steps 1 and 3.
 
 ### 1. Kernel boot parameter
-Please make sure the following kernel boot parameters are properly set `/etc/default/grub`. 
+Please make sure the following kernel boot parameters are properly set in `/etc/default/grub` on the server. 
 ```
 GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux 6.5.0-41-generic" #isca2025
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=on iommu=pt no5lvl" #isca2025
@@ -77,7 +79,7 @@ a). Clone the GitHub repo and submodules.
     git submodule update --remote
     ```
 
-b). Build all necessary drivers, libraries, and benchmarks for server, snic, or client.
+b). Build all necessary drivers, libraries, and benchmarks on server, snic, or client.
 
     ```
     cd scripts/common/
